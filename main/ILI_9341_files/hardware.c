@@ -1,4 +1,13 @@
-#include "ILI_9341_files/hardware.h"
+/**
+# Project: ESP_S3_RFID
+#
+# Author: Łukasz Gąsecki
+# Description: Configures the ESP32-S3 hardware peripherals, including independent SPI buses (SPI2 and SPI3) and GPIO pins for the TFT display and touch sensor.
+# 
+*/
+
+#include "hardware.h"
+#include "tft_gfx.h"  
 
 void init_hardware() {
     // 1. Inicjalizacja SPI2 dla Wyświetlacza

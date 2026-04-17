@@ -13,5 +13,6 @@
     "--background-index",
     "--query-driver=**",
     "--compile-commands-dir=c:\\Users\\gasec\\Desktop\\Project\\ESP_S3_RFID\\build"
-  ]
+  ],
+  "idf.flashType": "JTAG"
 }

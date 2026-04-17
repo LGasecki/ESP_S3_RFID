@@ -1,10 +1,18 @@
-#include "tft_gfx.h"
-#include "hardware.h"
+/**
+# Project: ESP_S3_RFID
+#
+# Author: Łukasz Gąsecki
+# Description: Implements the ILI9341 TFT display driver over SPI. Provides fundamental graphics functions for drawing pixels, rectangles, and text using DMA transfers.
+# 
+*/
+
+#include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_rom_sys.h" 
-#include <string.h>
-#include "glcdfont.c" 
+#include "tft_gfx.h"
+#include "hardware.h"
+#include "glcdfont.c"
 
 // --- Funkcje pomocnicze SPI (ESP-IDF) ---
 void TFT_WriteCommand(uint8_t cmd) {

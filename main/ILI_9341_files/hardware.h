@@ -3,7 +3,6 @@
 
 #include "driver/spi_master.h"
 #include "driver/gpio.h"
-#include "tft_gfx.h" //<- Wymiary ekranu
 
 // --- SPI2: Magistrala dla EKRANU ---
 #define PIN_NUM_TFT_MOSI 10

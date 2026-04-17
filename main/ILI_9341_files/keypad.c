@@ -1,12 +1,17 @@
-/* * File:   keypad.c
- * Author: User
- */
+/**
+# Project: ESP_S3_RFID
+#
+# Author: Łukasz Gąsecki
+# Description: Renders the numeric keypad interface on the TFT display and processes user touch events for PIN entry, visual feedback, and authentication logic.
+# 
+*/
 
+#include <string.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "keypad.h"
 #include "tft_gfx.h"
 #include "touch_sensor.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
 
 // --- Konfiguracja Klawiatury ---
 #define KEY_W 50
@@ -17,14 +22,14 @@
 #define UPDATE_PIN_X 30
 #define UPDATE_PIN_Y 2
 
-// Dane u?ytkownika
+// Dane użytkownika
 static char pinBuffer[5] = ""; 
 const char USER_PIN[] = "1234"; 
 
 
 void Draw_Keypad(void) {
     TFT_FillScreen(TFT_BLACK);    
-    // Rysowanie pola na wpisany kod (gwiazdki)
+    // Rysowanie pola na wpisany kod
     TFT_FillRect(KEY_START_X, KEY_START_Y +(KEY_H + KEY_GAP)* 4 , KEY_START_X +(KEY_W + KEY_GAP)* 3, 2, TFT_WHITE); 
     
     char labels[12][3] = {"1","2","3", "4","5","6", "7","8","9", "C","0","OK"};
@@ -36,7 +41,7 @@ void Draw_Keypad(void) {
         uint16_t x = KEY_START_X + col * (KEY_W + KEY_GAP);
         uint16_t y = KEY_START_Y + row * (KEY_H + KEY_GAP);
         
-        // --- DOB�R KOLOR�W Z POPRAWK? DLA EKRANU BGR ---
+        // --- DOBÓR KOLORÓW ---
         uint16_t color;
         if (i == 9) {
             color = TFT_RED; 
@@ -73,9 +78,9 @@ bool Handle_Login_Touch(uint16_t tx, uint16_t ty) {
         if (Is_Btn_Pressed(tx, ty, bx, by, KEY_W, KEY_H)) {
             char key = keys[i];
             
-            // Animacja klikni?cia
+            // Animacja kliknięcia (Zoptymalizowana: 50ms daje lepszą responsywność)
             TFT_FillRect(bx, by, KEY_W, KEY_H, TFT_WHITE);
-            vTaskDelay(100);
+            vTaskDelay(pdMS_TO_TICKS(50));
             
             // --- Przywracanie koloru  ---
             uint16_t color;
@@ -98,17 +103,18 @@ bool Handle_Login_Touch(uint16_t tx, uint16_t ty) {
                     // --- PIN POPRAWNY ---
                     TFT_FillScreen(TFT_BLACK);
                     TFT_Print(80, 100, "LOGOWANIE...", TFT_GREEN, TFT_BLACK, 2);
-                    vTaskDelay(1000);
+                    vTaskDelay(pdMS_TO_TICKS(800)); // 800ms to idealny czas na przeczytanie komunikatu
                     
-                    // Czy?cimy ekran pod nast?pny etap
+                    // Czyścimy ekran pod następny etap
                     TFT_FillScreen(TFT_BLACK); 
                     
+                    pinBuffer[0] = 0; 
                     loginSuccess = true; // Zwracamy sukces!
                 } else {
-                    // --- PIN B??DNY ---
+                    // --- PIN BŁĘDNY ---
                     TFT_FillRect(38, 210, 136, 20, TFT_YELLOW); 
                     TFT_Print(42, 214, "BLEDNY KOD!", TFT_RED, TFT_YELLOW, 2);
-                    vTaskDelay(1000);
+                    vTaskDelay(pdMS_TO_TICKS(1000));
                     TFT_FillRect(38, 210, 136, 20, TFT_BLACK); // Wyczysc komunikat
                     
                     pinBuffer[0] = 0; 
@@ -119,8 +125,12 @@ bool Handle_Login_Touch(uint16_t tx, uint16_t ty) {
                 pinBuffer[len+1] = 0;
             }
             if(!loginSuccess) Update_Pin_Display();
-            while(Touch_IsPressed()); // Debouncing
             
+            // DEBOUNCING: Czekamy na puszczenie ekranu, ale pozwalamy systemowi oddychać!
+            // To najistotniejsza zmiana pod kątem stabilności FreeRTOS.
+            while(Touch_IsPressed()) {
+                vTaskDelay(pdMS_TO_TICKS(40));
+            }
             return loginSuccess; 
         }
     }

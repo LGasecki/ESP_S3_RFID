@@ -1,7 +1,10 @@
-/*
- * tft_gfx.h
- * Sterownik ILI9341 - Naglowek
- */
+/**
+# Project: ESP_S3_RFID
+#
+# Author: Łukasz Gąsecki
+# Description: Provides the XPT2046 touch controller driver. Handles SPI communication, raw data sampling, noise filtering, and mapping physical touch inputs to screen coordinates.
+# 
+*/
 
 #ifndef TFT_GFX_H
 #define TFT_GFX_H
