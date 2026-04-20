@@ -20,6 +20,10 @@
 #define PIN_NUM_TOUCH_CS  18
 #define PIN_NUM_TOUCH_IRQ 15
 
+#define PN532_UART_PORT UART_NUM_2
+#define PIN_PN532_RX 7
+#define PIN_PN532_TX 6
+
 class Hardware {
 public:
     static spi_device_handle_t spi_tft;
