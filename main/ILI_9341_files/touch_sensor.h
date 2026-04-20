@@ -1,21 +1,22 @@
-#ifndef TOUCH_SENSOR_H
-#define TOUCH_SENSOR_H
+#pragma once
 
-// --- 1. Biblioteki Standardowe ---
 #include <stdint.h>
 #include <stdbool.h>
 
-// --- Struktura wiadomości z danymi dotyku ---
-typedef struct {
+struct TouchEvent {
     uint16_t x;
     uint16_t y;
-} TouchEvent;
+};
 
-// --- Deklaracje Funkcji ---
-void Touch_Init(void);
-bool Touch_IsPressed(void);
-bool Touch_GetRaw(uint16_t *x, uint16_t *y);
-bool Touch_GetCoordinates(uint16_t *x_pos, uint16_t *y_pos);
-bool Is_Btn_Pressed(uint16_t tx, uint16_t ty, uint16_t x, uint16_t y, uint16_t w, uint16_t h);
+class TouchSensor {
+public:
+    void init();
+    bool isPressed();
+    bool getCoordinates(uint16_t &x_pos, uint16_t &y_pos);
+    static bool isBtnPressed(uint16_t tx, uint16_t ty, uint16_t x, uint16_t y, uint16_t w, uint16_t h);
 
-#endif
+private:
+    uint16_t readSPI(uint8_t command);
+    bool getRaw(uint16_t &x, uint16_t &y);
+    long mapVal(long x, long in_min, long in_max, long out_min, long out_max);
+};

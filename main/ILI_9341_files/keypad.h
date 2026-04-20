@@ -1,24 +1,21 @@
-/* * File:   keypad.h
- * Author: User
- *
- * Obs?uga ekranu logowania i klawiatury numerycznej
- */
-
-#ifndef KEYPAD_H
-#define	KEYPAD_H
+#pragma once
 
 #include <stdint.h>
-#include <stdbool.h>
-#include <string.h>
+#include "tft_gfx.h"
+#include "touch_sensor.h"
 
-// Rysuje ca?? klawiatur? na ekranie
-void Draw_Keypad(void);
+class Keypad {
+public:
+    Keypad(TFT_GFX& display, TouchSensor& touch);
+    
+    void draw();
+    void updatePinDisplay();
+    bool handleLoginTouch(uint16_t tx, uint16_t ty);
 
-// Aktualizuje wy?wietlanie gwiazdek (****)
-void Update_Pin_Display(void);
-
-// Obs?uguje dotyk na ekranie logowania
-// Zwraca: true - je?li kod poprawny (zalogowano), false - w przeciwnym razie
-bool Handle_Login_Touch(uint16_t tx, uint16_t ty);
-
-#endif	/* KEYPAD_H */
+private:
+    TFT_GFX& tft;
+    TouchSensor& touchSensor;
+    
+    char pinBuffer[5];
+    const char* USER_PIN;
+};
