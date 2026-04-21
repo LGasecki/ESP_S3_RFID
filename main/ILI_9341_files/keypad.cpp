@@ -1,6 +1,7 @@
 /**
 # Project: ESP_S3_RFID
 #
+# Module: keypad.cpp
 # Author: Łukasz Gąsecki
 # Description: Renders the numeric keypad interface on the TFT display and processes user touch events for PIN entry, visual feedback, and authentication logic.
 # 

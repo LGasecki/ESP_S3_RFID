@@ -1,8 +1,16 @@
+/**
+# Project: ESP_S3_RFID
+#
+# Author: Łukasz Gąsecki
+# Description: Implementacja komunikacji z układem PN532 przez UART.
+#              Zoptymalizowana pod kątem synchronizacji ramek.
+# 
+*/
+
 #include "PN532_UART.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include <string.h>
 
 static const char* TAG = "PN532_UART";
 
@@ -20,14 +28,9 @@ void PN532_UART::begin() {
     uart_config.flow_ctrl = UART_HW_FLOWCTRL_DISABLE;
     uart_config.source_clk = UART_SCLK_DEFAULT;
 
-    // 1. Najpierw konfiguracja parametrów
     uart_param_config(_uart_num, &uart_config);
-    
-    // 2. Potem ustawienie pinów
     uart_set_pin(_uart_num, _tx_pin, _rx_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
-    
-    // 3. Na końcu instalacja sterownika z buforem RX = 1024 oraz TX = 1024 (tutaj był błąd - brak bufora TX!)
-    uart_driver_install(_uart_num, 1024, 1024, 0, NULL, 0);
+    uart_driver_install(_uart_num, 2048, 2048, 0, NULL, 0);
 }
 
 uint8_t PN532_UART::dcs(uint8_t *data, size_t length) {
@@ -37,6 +40,8 @@ uint8_t PN532_UART::dcs(uint8_t *data, size_t length) {
 }
 
 std::vector<uint8_t> PN532_UART::writeCommand(uint8_t cmd, const std::vector<uint8_t> &datas, int time_out) {
+    uart_flush_input(_uart_num); // Czyszczenie starych danych/szumów
+
     uint8_t *data = const_cast<uint8_t *>(datas.data());
     size_t length = datas.size();
     std::vector<uint8_t> commands;
@@ -59,39 +64,40 @@ std::vector<uint8_t> PN532_UART::writeCommand(uint8_t cmd, const std::vector<uin
     frame.push_back(dcs_value);
     frame.push_back(PN532Cmd::Data_Postamble);
 
-    // Wysyłanie przez ESP-IDF UART
     uart_write_bytes(_uart_num, frame.data(), frame.size());
 
     uint8_t response[256];
     TickType_t startTick = xTaskGetTickCount();
     int resLength = 0;
 
-    // Odczyt z timeoutem
+    // Pobieranie danych do bufora (kropka w kropkę jak w działającym kodzie Arduino)
     while ((xTaskGetTickCount() - startTick) * portTICK_PERIOD_MS < time_out) {
         int bytes_read = uart_read_bytes(_uart_num, response + resLength, sizeof(response) - resLength, pdMS_TO_TICKS(10));
         if (bytes_read > 0) {
             resLength += bytes_read;
         }
-        if (resLength >= 6) { break; } 
+
+        if (resLength >= 11) {
+            uint8_t expected_len = response[9];
+            int total_expected = 6 + 7 + expected_len + 2; 
+            
+            if (total_expected > 256) total_expected = 256; 
+            if (resLength >= total_expected) {
+                break;
+            }
+        }
     }
 
-    if (resLength < 6) {
-        // ESP_LOGW(TAG, "Timeout or invalid response length"); // Opcjonalny log błędów
-        return {};
-    }
+    if (resLength < 6) { return {}; }
 
-    // Ekstrakcja danych
     uint8_t res_len = response[9];
     uint8_t res_length_check_sum = response[10];
-    if (((res_len + res_length_check_sum) & 0xFF) != 0) {
-        ESP_LOGE(TAG, "Length checksum error");
-        return {};
-    }
+    
+    // Ciche ignorowanie błędów sumy kontrolnej (szumu) bez spamowania konsoli
+    if (((res_len + res_length_check_sum) & 0xFF) != 0) { return {}; } 
+    
     uint8_t res_dcs_value = response[11 + res_len];
-    if (dcs(response + 11, res_len) != res_dcs_value) {
-        ESP_LOGE(TAG, "Data checksum error");
-        return {};
-    }
+    if (dcs(response + 11, res_len) != res_dcs_value) { return {}; } 
 
     std::vector<uint8_t> payload(response + 13, response + 13 + res_len);
     return payload;
@@ -106,12 +112,16 @@ std::vector<uint8_t> PN532_UART::writeRawCommand(const std::vector<uint8_t> data
 }
 
 bool PN532_UART::setNormalMode() {
-    std::vector<uint8_t> wakeUpCommand = {
-        0x55, 0x55, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-    };
-    uart_write_bytes(_uart_num, wakeUpCommand.data(), wakeUpCommand.size());
+    // Sekwencja wybudzająca
+    uint8_t wakeup[] = {0x55, 0x55, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    uart_write_bytes(_uart_num, wakeup, sizeof(wakeup));
+    vTaskDelay(pdMS_TO_TICKS(50));
+    
     std::vector<uint8_t> response = writeCommand(PN532Cmd::SAMConfiguration, {0x01});
-    vTaskDelay(pdMS_TO_TICKS(10));
+    
+    // Konfiguracja limitu powtórzeń RF (RFConfiguration) - skanuje tylko raz i nie zawiesza modułu
+    writeCommand(0x32, {0x05, 0xFF, 0x01, 0x00});
+    
     return response.size() > 0;
 }
 

@@ -9,12 +9,11 @@
 
 class PN532_UART {
 public:
-    // Zmodyfikowany konstruktor dla ESP-IDF
+    // Podmiana HardwareSerial na ESP-IDF
     explicit PN532_UART(uart_port_t uart_num, int tx_pin, int rx_pin);
     virtual ~PN532_UART();
 
-    void begin(); // Funkcja inicjalizująca UART w ESP-IDF
-
+    void begin();
     std::vector<uint8_t> writeCommand(uint8_t cmd, const std::vector<uint8_t> &datas = {}, int time_out = 1000);
     std::vector<uint8_t> writeRawCommand(const std::vector<uint8_t> data, int time_out = 1000);
     bool setNormalMode();
@@ -22,6 +21,7 @@ public:
     TagTechnology::Iso14aTagInfo hf14aScan();
     void close();
 
+    // NDEF emulation methods
     std::vector<uint8_t> getData();
     std::vector<uint8_t> setData(const std::vector<uint8_t> &data);
     bool inRelease();
